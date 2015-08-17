@@ -24,7 +24,9 @@ var example = new CycleCalendar({});
 监听事件
 
 ### 接口时间说明
-+ `focus` 选中日期，回调参数为{year:2015, month: 04, day: 02},年月日
++ `focus` 选中日期，回调参数有两个
+	+ object 为{year:2015, month: 04, day: 02},年月日
+	+ dom 当前点击对应的dom
 
 ### CycleCalendar.trigger(event, [params])
 触发事件

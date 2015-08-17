@@ -16,9 +16,10 @@ window.example = new CycleCalendar({
 	token: "55911ec38cf432d7258b458e",
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json"
 });
-example.on("focus", function(date){
+example.on("focus", function(date, dom){
 	// doing focus
 	console.log( date );
+	console.log( dom );
 });
 document.getElementById("btn").onclick = function(){
 	example.trigger("render", {

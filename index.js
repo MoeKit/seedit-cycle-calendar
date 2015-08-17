@@ -2,6 +2,27 @@ var Eventor = require("eventor");
 var CycleCalendar = function(opt){
 	return this.init(opt);
 };
+HTMLElement.prototype.slider = function(fn) {
+    var touchstart, touchend, val, eStartVal;
+    this.addEventListener('touchstart', function(e) {
+        e.stopPropagation();
+        touchstart = e.timeStamp;
+        eStartVal = e.changedTouches[0].pageX;
+    });
+    this.addEventListener('touchmove', function(e) {
+    	val = e.changedTouches[0].pageX - eStartVal;
+    	if( Math.abs(val) > 2 ){
+    		e.preventDefault();
+    	}
+    });
+    this.addEventListener("touchend", function(e){
+    	if( val > 20 ){
+    		fn && fn(e, "left");
+    	} else if( val < -20 ){
+    		fn && fn(e, "right");
+    	}
+    })
+};
 Eventor.mixTo(CycleCalendar);
 require("./style.css");
 CycleCalendar.prototype.init = function(opt){
@@ -32,10 +53,10 @@ CycleCalendar.prototype.init = function(opt){
 CycleCalendar.prototype.error = function(){
 	var _this = this;
 	if( !_this.classname || !document.getElementsByClassName(_this.classname) ){
-		console.log("classname不能为空或者classname对象不存在");
+		console.error("classname不能为空或者classname对象不存在");
 		return true;
 	} else if( !_this.token ){
-		console.log(_this.classname, " token不能为空");
+		console.error(_this.classname, " token不能为空");
 		return true;
 	} else return false;
 }
@@ -104,7 +125,7 @@ function renderMenstrual(opt){
 			list.eq( start.getDate()-1 ).addClass("menstrual");
 		}
 	} else {
-		console.log("经期开始时间为空 || 当前时间的年月为空");
+		console.error("经期开始时间为空 || 当前时间的年月为空");
 	}
 }
 function addZero(num){
@@ -175,6 +196,7 @@ CycleCalendar.prototype.addEvent = function(){
 	$btnRight.hide(); // 默认隐藏右侧滑动按钮
 	/*--------------------- 左边滑动按钮 -------------------*/
 	$btnLeft.on("click", function(){
+		slideW = parseInt(_this.width,10);
 		if( !canClick ) return false;
 		canClick = false;
 		$btnRight.show();
@@ -199,6 +221,7 @@ CycleCalendar.prototype.addEvent = function(){
 	});
 	/*--------------------- 右边滑动按钮 -------------------*/
 	$btnRight.on("click", function(){
+		slideW = parseInt(_this.width,10);
 		if( !canClick ) return false;
 		if( _this.sysdate.year < _this.date.year || (_this.sysdate.year == _this.date.year && _this.sysdate.month <= _this.date.month) ){ // 当前月份时隐藏右边滑动按钮
 			$btnRight.hide();
@@ -220,7 +243,7 @@ CycleCalendar.prototype.addEvent = function(){
 	});
 	_this.on("render", function(opt){
 		if( _this.objClass.find(".appdate-main tr td > div.active").length <= 0 ){
-			console.log("还没有选中目标日期");
+			console.error("还没有选中目标日期");
 		} else {
 			if(!!opt){
 				var addClass = ''
@@ -262,13 +285,12 @@ CycleCalendar.prototype.addEvent = function(){
 		_this.objClass.find(".appdate-main tr td > div.can-do-it").off("click").on("click", function(){
 			_this.objClass.find(".appdate-main tr td > div.can-do-it").removeClass("active");
 			$(this).addClass("active");
-			var data = {
-				date: {
-					year: _this.date.year,
-					month: _this.date.month
-				}
-			};
-			_this.emit("focus", {year: _this.date.year, month: _this.date.month, day: parseInt(($(this).text()=="今"||$(this).text()=="今天"?_this.sysdate.day:$(this).text()),10)});
+			var date = {
+				year: _this.date.year,
+				month: _this.date.month,
+				day: parseInt(($(this).text()=="今"||$(this).text()=="今天"?_this.sysdate.day:$(this).text()),10)
+			}
+			_this.emit("focus", date, this);
 		});
 		// _this.on("menstrual", function(){
 		// 	if( _this.objClass.find(".appdate-main tr td > div.active").length <= 0 ){
@@ -311,6 +333,37 @@ CycleCalendar.prototype.addEvent = function(){
 		_this.date.month = _this.date.month == 1 ? 12 : _this.date.month-1;
 		$(".appdate-val").html(_this.date.year+"年"+_this.date.month+"月");
 	}
+	function createResizeProxy(cb, scope){
+		return function(){
+			clearTimeout(scope.resizeTimeout);
+			var args = Array.prototype.slice.call(arguments, 0);
+			scope.resizeTimeout = setTimeout(function(){
+				var width = document.body.clientWidth;
+				if( width != scope.lastWidth ){
+					cb.apply(scope, args);
+				}
+				scope.lastWidth = width;
+			}, 300);
+		};
+	};
+
+	// 屏幕翻动调整大小
+	window.addEventListener("resize", createResizeProxy(function () {
+    	_this.width = document.body.clientWidth;
+    	var cur = Number(_this.objClass.find(".appdate-main").attr("data-translate-x")) / _this.objClass.find("table").width();
+		_this.objClass
+			.width( _this.width )
+			.find(".appdate-main")
+			.css("-webkit-transform","translateX("+(cur*_this.width)+"px)")
+			.attr("data-translate-x", cur*_this.width)
+			.find("table").width(_this.width);
+    }, window), false);
+	// 左右滑动
+	_this.objClass.find(".appdate-box")[0].slider( function(e, dir){
+		if( dir == "left" ){
+			_this.objClass.find(".date-left").trigger("click");
+		} else if( dir == "right" ) _this.objClass.find(".date-right").trigger("click");
+	});
 }
 function lastMonth(date){
 	return {
