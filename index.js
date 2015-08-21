@@ -32,6 +32,7 @@ CycleCalendar.prototype.init = function(opt){
 		_this.objClass = $("."+_this.classname);
 		_this.width = opt.width || document.body.clientWidth;
 		_this.objClass.width( _this.width );
+		_this.isdate = opt.isdate || false;
 		_this.speed = opt.speed || 300;
 		_this.token = opt.token || "";
 		_this.api = opt.api || "";
@@ -70,7 +71,7 @@ CycleCalendar.prototype.getApi = function(year, month){
 			date: new Date(year,month-1,1).getTime()*0.001 // ios不支持 "2015-04-01",即不支持"-"
 		},
 		success: function(data){
-			if( !data.data || !data.data.record ){
+			if( !data || !data.data || !data.data.record ){
 				return false;
 			}
 			var list = $(".tab-"+year+"-"+month+" .can-show");
@@ -147,6 +148,7 @@ CycleCalendar.prototype.initHtml = function(){
 }
 CycleCalendar.prototype.initTable = function(year, month){
 	var _this = this;
+	this.earlyDate = [2015,8,15];
 	var today = {
 		year: new Date().getFullYear(),
 		month: new Date().getMonth()+1,
@@ -162,23 +164,43 @@ CycleCalendar.prototype.initTable = function(year, month){
 		arr.push({date: i, isNowMonth: false});
 	}
 	// date: 当天，isNowMonth：是否是当前月份， isFuture：是否是当前月
+	this._formatEarlyDate();
 	for( i=1; i<=nowMonthAllDay; i++ ){ // 显示当月存在的天数
-		if( year == today.year && month == today.month && i > today.day ){
-			arr.push({date: i, isNowMonth: true, isFuture: true });
-		} else if( year == today.year && month == today.month && i == today.day ) {
-			arr.push({date: "今", isNowMonth: true, isToday: true});
+		if( this.isdate ){
+
+			if( year == today.year && month == today.month && i > today.day ){
+				arr.push({date: i, isNowMonth: true, isFuture: true });
+			} else if( year == today.year && month == today.month && i == today.day ) {
+				if( year > this.earlyDate[0] || (year == this.earlyDate[0] && month > this.earlyDate[1]) || (year == this.earlyDate[0] && month == this.earlyDate[1] && month > this.earlyDate[1]) ) arr.push({date: "今", isNowMonth: true, isToday: true});
+				else arr.push({date: "今", isNowMonth: true, isToday: true, isPast: true});
+			} else if( this.earlyDate[0] == year && this.earlyDate[1] == month ){
+				if( i < this.earlyDate[2] ) arr.push({date: i, isNowMonth: true, isPast: true});
+				else arr.push({date: i, isNowMonth: true });
+			} else if( this.earlyDate[0] == year && this.earlyDate[1] > month ){
+				arr.push({date: i, isNowMonth: true, isPast: true});
+			} else {
+				arr.push({date: i, isNowMonth: true });
+			}
+			continue;
 		} else {
-			arr.push({date: i, isNowMonth: true});
+			if( year == today.year && month == today.month && i > today.day ){
+				arr.push({date: i, isNowMonth: true, isFuture: true });
+			} else if( year == today.year && month == today.month && i == today.day ) {
+				arr.push({date: "今", isNowMonth: true, isToday: true});
+			} else {
+				arr.push({date: i, isNowMonth: true});
+			}
 		}
+		
 	}
 	for( i=1; i<=(6-lastDayWeek); i++ ){ // 显示当月还存在的下月天数
 		arr.push({date: i, isNowMonth: false});
 	}
 	table = '<table class="rows-'+Math.ceil(arr.length/7)+' tab-'+year+'-'+month+'" data-date="'+year+'-'+month+'" style="width: '+_this.width+'px;" cellspacing="0" cellpadding="0">';
 	for( i=0; i<arr.length; i++ ){ // 渲染当月可显示的天数
-		table += i ==0 ? '<tr>' : i%7 == 0 ? '</tr><tr>' : ''; // 每一周换一行(即tr)
+		table += i ==0 ? '<tr>' : i%7 == 0 ? '</tr><tr>' : ''; // 每一周换一行(即tr)  
 		table += arr[i].isNowMonth ? 
-					(arr[i].isFuture ? '<td><div class="can-show can-not-do"><span>'+arr[i].date+'</span><em></em></div></td>' : 
+					(arr[i].isFuture||arr[i].isPast ? '<td><div class="can-show can-not-do"><span>'+arr[i].date+'</span><em></em></div></td>' : 
 						arr[i].isToday ? '<td><div class="can-show can-do-it today"><span>'+arr[i].date+'</span><em></em></div></td>' :
 							'<td><div class="can-show can-do-it"><span>'+arr[i].date+'</span><em></em></div></td>')
 					: '<td>'+arr[i].date+'</td>';
@@ -186,17 +208,30 @@ CycleCalendar.prototype.initTable = function(year, month){
 	table += '</tr></table>';
 	return table;
 }
+CycleCalendar.prototype._formatEarlyDate = function(){
+	var day = new Date(this.earlyDate[0],addZero(this.earlyDate[1]),0).getDate();
+	this.earlyDate[1] = this.earlyDate[1] <= 0 ? 1 : this.earlyDate[1] > 12 ? 12 : this.earlyDate[1];
+	this.earlyDate[2] = this.earlyDate[2] <= 0 ? 1 : this.earlyDate[2] > day ? day : this.earlyDate[2];
+}
 CycleCalendar.prototype.addEvent = function(){
 	var _this = this;
+	
 	var slideW = parseInt(_this.width,10);
 	var $btnLeft = _this.objClass.find(".date-left"); // 左滑动按钮
 	var $btnRight = _this.objClass.find(".date-right"); // 右滑动按钮
 	var $appdateMain = _this.objClass.find(".appdate-main"); // table主体
 	var canClick = true; // 默认可以点击左右滑动
 	$btnRight.hide(); // 默认隐藏右侧滑动按钮
+	
+	if( this.date.year == this.earlyDate[0] && this.date.month <= this.earlyDate[1] ){ $btnLeft.hide(); }
 	/*--------------------- 左边滑动按钮 -------------------*/
 	$btnLeft.on("click", function(){
 		slideW = parseInt(_this.width,10);
+		console.log( _this.date.year == _this.earlyDate[0] && _this.date.month < _this.earlyDate[1] );
+		if( _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
+			$btnLeft.hide();
+			return false;
+		}
 		if( !canClick ) return false;
 		canClick = false;
 		$btnRight.show();
@@ -218,6 +253,9 @@ CycleCalendar.prototype.addEvent = function(){
 			"-webkit-transform": "translateX("+translateX+"px)",
 			"-webkit-transition": "."+_this.speed*0.01+"s linear"
 		}).attr("data-translate-x",translateX);
+		if( _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
+			$btnLeft.hide();
+		}
 	});
 	/*--------------------- 右边滑动按钮 -------------------*/
 	$btnRight.on("click", function(){
@@ -228,6 +266,7 @@ CycleCalendar.prototype.addEvent = function(){
 			return false;
 		}
 		canClick = false;
+		$btnLeft.show();
 		updataDateAdd(); // 更新当前显示的日期
 		var translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW;
 		setTimeout(function(){
