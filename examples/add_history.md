@@ -13,12 +13,12 @@ window.example1 = new CycleCalendar({
 	classname: "cycle-calendar-box-1",
 	speed: 300,
 	//token: "553d9e1b8cf432534c8b459c"
-	token: "55d59c96481b9c8f058b459b",
+	token: "55e501c78cf4328a298b45d4",
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json",
 	fill_history: true,
 	history_date: {
-		come: 1439395200,
-		end: 1440000000
+		come: 1436198400,
+		end: 1436716800
 	}
 });
 example1.on("focus", function(date, dom){

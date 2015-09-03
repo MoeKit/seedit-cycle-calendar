@@ -61,11 +61,13 @@ CycleCalendar.prototype.init = function(opt){
 	
 	if( !!_this.error() ) return false;
 	if( this.isdate ){
-		_this.getApi( _this.date.year, _this.date.month, function(){
-			_this.initHtml();
-			_this.addEvent();
-		} );
-		_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
+		//_this.getApi( _this.sysdate.year, _this.sysdate.month, function(data){
+		//	_this.initHtml();
+		//	_this.getApi( lastMonth(_this.sysdate).year, lastMonth(_this.sysdate).month, function(data){
+		//		_this.addEvent();
+		//	} );
+		//} );
+		_this.initHtmlByDate();
 		// _this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
 		
 	} else if( this.fill_history ){
@@ -94,26 +96,12 @@ CycleCalendar.prototype.error = function(){
 		return true;
 	} else return false;
 }
-CycleCalendar.prototype.__getYMD = function(timestamp){
-	// t是时间戳
-	var obj = !!timestamp ? new Date(timestamp*1000) : new Date();
-	var obj = {
-		year: obj.getFullYear(),
-		month: obj.getMonth()+1,
-		day: obj.getDate(),
-		original: parseInt(obj.getTime()/1000,10),
-	};
-	obj.ymd = [obj.year, obj.month, obj.day];
-	obj.stamp = parseInt(new Date(obj.year, obj.month-1, obj.day).getTime()/1000,10);
-	obj.firstStamp = parseInt(new Date(obj.year, obj.month-1, 1).getTime()/1000,10);
-	obj.lastStamp = parseInt(new Date(obj.year, obj.month, 0).getTime()/1000,10); 
-	return obj;
-}
+
 // 设置状态：月经期
 CycleCalendar.prototype.setMenstrual = function(year, month, info){
 	if( !!info ){
 		for( var i=0; i<info.length; i++ ){
-			renderMenstrual({
+			this.renderMenstrual({
 				start: info[i].come,
 				end: info[i].end-86400,
 				year: year,
@@ -153,25 +141,79 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 	// 周期圆圈-更新月经开始日和月经结束日
 	_this.setDateByCycle = function(data){
 		if( _this.isdate ){
-			var ring = data.data.ring;
-			ring.info = data.data.info[0];
 			var today = _this.sysdate;
-			var come = _this.__getYMD(ring.info.come);
-			var end = _this.__getYMD(ring.info.end);
-			var menstrualBtn = !!ring.info.end ? 
-									(today.stamp >= come.original+24*60*60 ? 
-										today.stamp <= end.original+14*24*60*60 ? 'end' : 'come' 
-									: '')
-								: (today.stamp >= come.stamp ? 'come': '');
-			if( menstrualBtn == "come" ){
-				_this.earlyDate = _this.__getYMD(ring.info.end+14*24*60*60).ymd;
-			} else if( menstrualBtn == "end" ){
-				_this.earlyDate = _this.__getYMD(ring.info.come+24*60*60).ymd;
+			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10));
+			var arr = [];
+			//if( month == 8 ) console.log( data.data.info );
+			if( !data.data.info[0].really ){
+				arr[0] = {
+					come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
+					end: parseInt(new Date(year, month, 1).getTime()/1000,10)
+				}
 			} else {
-				_this.earlyDate = today.ymd;
-			}
-			cb && cb();
 
+				if( data.data.info[0].come - date.firstStamp > 14*24*60*60 ){
+					arr[0] = {
+						come: date.firstStamp,
+						end: data.data.info[0].come - 14*24*60*60
+					}
+				} else if(data.data.info[0].come + 14*24*60*60 < date.lastStamp ){
+					arr[0] = {
+						come: data.data.info[0].come + 14*24*60*60,
+						end: date.lastStamp
+					}
+				}
+			}
+			if( month == 8 ) console.log( arr );
+			_this.history_arr = [];
+				
+
+				if( arr.length == 0 ) _this.history_arr = [];
+				var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
+				var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
+				for(var i=0;i<arr.length; i++){
+					arr[i] = {
+						come: _this.__getYMD(arr[i].come),
+						end: _this.__getYMD(arr[i].end)
+					};
+					for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
+						if( _cur_first <= j && j <= _cur_last ){
+							_this.history_arr.push( new Date(j*1000).getDate() );
+						}
+					}
+				}
+			cb && cb(data);
+
+
+
+			// if( data.data.info[0].really ){
+			// 	var ring = data.data.ring;
+			// 	ring.info = data.data.info[0];
+			// 	
+			// 	var come = _this.__getYMD(ring.info.come);
+			// 	var end = _this.__getYMD(ring.info.end);
+			// 	var menstrualBtn = !ring.info.really ||
+			// 						(!!ring.info.really && today.stamp == come.original)
+			// 						(!!ring.info.really && today.stamp != come.original && !!ring.info.end && today.stamp > come.original+14*24*60*60) ? 
+			// 						'come' : 'end';
+			// 	
+			// 	if( menstrualBtn == "come" ){
+			// 		_this.earlyDate = _this.__getYMD(ring.info.come+15*24*60*60).ymd;
+			// 	} else if( menstrualBtn == "end" ){
+			// 		_this.earlyDate = _this.__getYMD(ring.info.come+24*60*60).ymd;
+			// 	} else {
+			// 		_this.earlyDate = today.ymd;
+			// 	}
+			// 	if( come.month == 9 ){
+			// 		//console.log(today.stamp, ring.info);
+			// 	}// console.log( _this.earlyDate );
+			// 	cb && cb(data);
+			// } else {
+			// 	console.log(123);
+			// 	_this.earlyDate = _this.__getYMD(today.stamp+24*60*60).ymd - 30*24*60*60;
+			// 	cb && cb(data);
+			// }
+			
 		}
 	}
 	// 补充历史周期，选择开始日和结束日
@@ -184,7 +226,7 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 			if( !rangeInfo || rangeInfo.length <= 0 ){
 				arr[0] = {
 					come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
-					end: parseInt(new Date(year, month, 1).getTime()/1000,10)-1
+					end: parseInt(new Date(year, month, 1).getTime()/1000,10)
 				}
 				// console.log({
 				// 	come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
@@ -247,14 +289,11 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 						// 	});
 						// } else 
 						
-						if( !!rangeInfo[i+1] && rangeInfo[i+1].come - rangeInfo[i].end > 28*24*60*60 ){
+						if( !!rangeInfo[i+1] && rangeInfo[i+1].come - rangeInfo[i].end > 15*24*60*60 ){
 							arr.push({
-								come: rangeInfo[i].end+15*24*60*60,
+								come: rangeInfo[i].come+15*24*60*60,
 								end: rangeInfo[i+1].come-14*24*60*60
 							});
-							if( month == 7 ){
-								//console.log("qq",arr);
-							}
 						}
 						// if( rangeInfo.length-1 == i && arr.length <= 0 ){
 						// 	var t = _this.__getYMD( rangeInfo[i].end );
@@ -310,8 +349,6 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 					// }
 				}
 			cb && cb(data);
-		} else {
-			console.log("errr");
 		}
 	}
 	$.ajax({
@@ -328,8 +365,9 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 			if( !data || !data.data || !data.data.record ){
 				console.error("ring.json: data.data||data.data.record不能为空");
 			}
-			if( !_this.isdate ){
+			if( !_this.isdate || !_this.fill_history ){
 				_this.setMostStatus(year, month, data);
+				_this.setMenstrual(year, month, data.data.info);
 			}
 			_this.setDateByCycle(data);
 			_this.setDateByCompletementCycle(year, month, data);
@@ -339,13 +377,13 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 		}
 	});
 }
-function renderMenstrual(opt){
+CycleCalendar.prototype.renderMenstrual = function(opt){
 	if( !opt.really ){
 		// 预测数据不显示
 		return false;
 	}
 	if( !!opt.start && !!opt.year && !!opt.month ){
-		var list = $(".tab-"+opt.year+"-"+opt.month+" .can-show");
+		var list = this.objClass.find(".tab-"+opt.year+"-"+opt.month+" .can-show");
 		var allDay = new Date(opt.year, opt.month, 0).getDate();
 		var start = new Date(opt.start*1000);
 		if( !!opt.end ){
@@ -395,7 +433,28 @@ CycleCalendar.prototype.initHtmlByCompletementCycle = function(year, month){
 			_this.setMenstrual(_this.date.year, _this.date.month, next_data.data.info);
 			_this.setMenstrual(lastMonth(_this.date).year, lastMonth(_this.date).month, data.data.info);
 			_this.setMenstrualToFillCycle();
-			_this.addEventByApi();
+			_this.addEvent();
+		} );
+	});
+}
+CycleCalendar.prototype.initHtmlByDate = function(year, month){
+	var _this = this;
+	_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month, function(data){
+		var t = _this.initTable(lastMonth(_this.date).year, lastMonth(_this.date).month);
+		_this.getApi( _this.date.year, _this.date.month, function(next_data){
+			t += _this.initTable(_this.date.year, _this.date.month);
+			var html = require("./index.tpl").replace("{{date}}",_this.date.year+"年"+_this.date.month+"月")
+										.replace("{{table}}", t );
+			_this.objClass
+					.html(html)
+					.find(".appdate-main")
+					.width( parseInt(_this.objClass.find(".appdate-main table").length, 10)+"01%" )
+					.css("-webkit-transform","translateX("+(-_this.width)+"px)")
+					.attr("data-translate-x",-_this.width)
+					.find("table").width(_this.width);
+			_this.setMenstrual(_this.date.year, _this.date.month, next_data.data.info);
+			_this.setMenstrual(lastMonth(_this.date).year, lastMonth(_this.date).month, data.data.info);
+			_this.addEvent();
 		} );
 	});
 }
@@ -405,11 +464,12 @@ CycleCalendar.prototype.setMenstrualToFillCycle = function(){
 		var _history_end = this.__getYMD(this.history_date.end);
 		for(var i=_history_come.month; i<=_history_end.month; i++){
 			if( this.objClass.find(".tab-"+_history_come.year+"-"+i).length > 0 ){
+				console.log( this.history_date.come );
 				this.setMenstrual(_history_come.year, i, [{
 					come: this.history_date.come,
 					end: this.history_date.end,
 					really: 1
-				}])
+				}]);
 			}
 		}
 	}
@@ -429,47 +489,61 @@ CycleCalendar.prototype.initTable = function(year, month){
 		arr.push({date: i, isNowMonth: false});
 	}
 	// date: 当天，isNowMonth：是否是当前月份， isFuture：是否是当前月
-	if( this.isdate ) this._formatEarlyDate();
+	// if( this.isdate ) this._formatEarlyDate();
 	for( i=1; i<=nowMonthAllDay; i++ ){ // 显示当月存在的天数
+		var _i = year == today.year && month == today.month && i == today.day?'今':i;
 		if( this.fill_history ){
+			// 补充周期
 			if( _this.history_arr.length <= 0 ){
-				arr.push({date: i, isNowMonth: true, isPast: true });
-			} else {
-				for( var j=0; j<_this.history_arr.length; j++ ){
-					if( _this.history_arr[j] == i ){
-						if( year == today.year && month == today.month && i == today.day ){
-							arr.push({date: "今", isNowMonth: true, isToday: true});
-						} else if( _this.fill_history && _this.history_date && _this.history_date.come > parseInt(new Date(year, month-1, i).getTime()/1000,10) && _this.history_date.come-14*24*60*60 <= parseInt(new Date(year, month-1, i).getTime()/1000,10) ) arr.push({date: i, isNowMonth: true, isPast: true });
-						else  arr.push({date: i, isNowMonth: true });
-						break;
-					}
-					if( j == _this.history_arr.length-1 ){
-						arr.push({date: i, isNowMonth: true, isPast: true });
-					}
+				arr.push({date: _i, isNowMonth: true, isPast: true });
+			} else if( ('_'+_this.history_arr.join('_')+'_').indexOf('_'+i+'_') >= 0 ){
+				if( year == today.year && month == today.month && i == today.day ){
+					arr.push({date: "今", isNowMonth: true, isToday: true});
+				} else if(year == today.year && month == today.month && i > today.day){
+					arr.push({date: _i, isNowMonth: true, isFuture: true });
+				} else {
+					arr.push({date: _i, isNowMonth: true });
 				}
+			} else {
+				arr.push({date: _i, isNowMonth: true, isPast: true });
 			}
 		} else if( this.isdate ){
-			if( year == today.year && month == today.month && i > today.day ){
-				arr.push({date: i, isNowMonth: true, isFuture: true });
-			} else if( year == today.year && month == today.month && i == today.day ) {
-				if( year > this.earlyDate[0] || (year == this.earlyDate[0] && month > this.earlyDate[1]) || (year == this.earlyDate[0] && month == this.earlyDate[1] && i > this.earlyDate[2]) ) arr.push({date: "今", isNowMonth: true, isToday: true});
-				else arr.push({date: "今", isNowMonth: true, isToday: true, isPast: true});
-			} else if( this.earlyDate[0] == year && this.earlyDate[1] == month ){
-				if( i < this.earlyDate[2] ) arr.push({date: i, isNowMonth: true, isPast: true});
-				else arr.push({date: i, isNowMonth: true });
-			} else if( this.earlyDate[0] == year && this.earlyDate[1] > month ){
-				arr.push({date: i, isNowMonth: true, isPast: true});
+			// 首页更新姨妈开始结束日
+			if( _this.history_arr.length <= 0 ){
+				arr.push({date: _i, isNowMonth: true, isPast: true });
+			} else if( ('_'+_this.history_arr.join('_')+'_').indexOf('_'+i+'_') >= 0 ){
+				if( year == today.year && month == today.month && i == today.day ){
+					arr.push({date: "今", isNowMonth: true, isToday: true});
+				} else if(year == today.year && month == today.month && i > today.day){
+					arr.push({date: _i, isNowMonth: true, isFuture: true });
+				} else {
+					arr.push({date: _i, isNowMonth: true });
+				}
 			} else {
-				arr.push({date: i, isNowMonth: true });
+				arr.push({date: _i, isNowMonth: true, isPast: true });
 			}
-			continue;
+			// if( year == today.year && month == today.month && i > today.day ){
+			// 	arr.push({date: _i, isNowMonth: true, isFuture: true });
+			// } else if( year == today.year && month == today.month && i == today.day ) {
+			// 	if( year > this.earlyDate[0] || (year == this.earlyDate[0] && month > this.earlyDate[1]) || (year == this.earlyDate[0] && month == this.earlyDate[1] && i <= this.earlyDate[2]) ) arr.push({date: "今", isNowMonth: true, isToday: true});
+			// 	else arr.push({date: "今", isNowMonth: true, isToday: true, isPast: true});
+			// } else if( this.earlyDate[0] == year && this.earlyDate[1] == month ){
+			// 	if( i < this.earlyDate[2] ) arr.push({date: _i, isNowMonth: true, isPast: true});
+			// 	else arr.push({date: _i, isNowMonth: true });
+			// } else if( this.earlyDate[0] == year && this.earlyDate[1] > month ){
+			// 	console.log(i);
+			// 	arr.push({date: _i, isNowMonth: true, isPast: true});
+			// } else {
+			// 	arr.push({date: _i, isNowMonth: true });
+			// }
 		} else {
+			// 亲密一刻
 			if( year == today.year && month == today.month && i > today.day ){
-				arr.push({date: i, isNowMonth: true, isFuture: true });
+				arr.push({date: _i, isNowMonth: true, isFuture: true });
 			} else if( year == today.year && month == today.month && i == today.day ) {
 				arr.push({date: "今", isNowMonth: true, isToday: true});
 			} else {
-				arr.push({date: i, isNowMonth: true});
+				arr.push({date: _i, isNowMonth: true});
 			}
 		}
 	}
@@ -493,171 +567,6 @@ CycleCalendar.prototype._formatEarlyDate = function(){
 	this.earlyDate[1] = this.earlyDate[1] <= 0 ? 1 : this.earlyDate[1] > 12 ? 12 : this.earlyDate[1];
 	this.earlyDate[2] = this.earlyDate[2] <= 0 ? 1 : this.earlyDate[2] > day ? day : this.earlyDate[2]; 
 }
-CycleCalendar.prototype.addEventByApi = function(){
-
-	var _this = this;
-	
-	var slideW = parseInt(_this.width,10);
-	var $btnLeft = _this.objClass.find(".date-left"); // 左滑动按钮
-	var $btnRight = _this.objClass.find(".date-right"); // 右滑动按钮
-	var $appdateMain = _this.objClass.find(".appdate-main"); // table主体
-	var canClick = true; // 默认可以点击左右滑动
-	$btnRight.hide(); // 默认隐藏右侧滑动按钮
-
-	if( this.isdate && this.date.year == this.earlyDate[0] && this.date.month <= this.earlyDate[1] ){ console.log(123123); $btnLeft.hide(); }
-	/*--------------------- 左边滑动按钮 -------------------*/
-	$btnLeft.on("click", function(){
-		slideW = parseInt(_this.width,10);
-		if( _this.isdate && _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
-			$btnLeft.hide();
-			return false;
-		}
-		if( !canClick ) return false;
-		canClick = false;
-		$btnRight.show();
-		updataDateRemove(); // 更新当前显示的日期
-		var translateX = parseInt($appdateMain.attr("data-translate-x"),10)+slideW; // 当前需滑动的位置
-		setTimeout(function(){
-			_this.getApi(lastMonth(_this.date).year, lastMonth(_this.date).month, function(data){
-				if( $appdateMain.find(".tab-"+lastMonth(_this.date).year+"-"+lastMonth(_this.date).month).length <= 0 ){ // 预加载的日期table是否已加载过
-					translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW; // 在前面插入一个table需要往回滑动一个table位置
-					$appdateMain.css("-webkit-transition","") // 移除动画
-								.width( Number($appdateMain.find("table").length+1)+"01%" ) // 更新table主体的宽度
-								.prepend( _this.initTable(lastMonth(_this.date).year, lastMonth(_this.date).month) )
-								.css("-webkit-transform","translateX("+(translateX)+"px)").attr("data-translate-x",translateX); // 在前面插入一个table需要往回滑动一个table位置
-					_this.setMenstrual(lastMonth(_this.date).year, lastMonth(_this.date).month, data.data.info);
-					_this.setMenstrualToFillCycle();
-				}
-				appdateFocus();
-				canClick = true;
-			});
-		},_this.speed);
-		$appdateMain.css({
-			"-webkit-transform": "translateX("+translateX+"px)",
-			"-webkit-transition": "."+_this.speed*0.01+"s linear"
-		}).attr("data-translate-x",translateX);
-		if( _this.isdate && _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
-			$btnLeft.hide();
-		}
-	});
-	/*--------------------- 右边滑动按钮 -------------------*/
-	$btnRight.on("click", function(){
-		slideW = parseInt(_this.width,10);
-		if( !canClick ) return false;
-		if( _this.sysdate.year < _this.date.year || (_this.sysdate.year == _this.date.year && _this.sysdate.month <= _this.date.month) ){ // 当前月份时隐藏右边滑动按钮
-			$btnRight.hide();
-			return false;
-		}
-		canClick = false;
-		$btnLeft.show();
-		updataDateAdd(); // 更新当前显示的日期
-		var translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW;
-		setTimeout(function(){
-			canClick = true;
-		},_this.speed);
-		$appdateMain.css({
-			"-webkit-transform": "translateX("+translateX+"px)",
-			"-webkit-transition": "."+_this.speed*0.01+"s linear"
-		}).attr("data-translate-x",translateX);
-		if( _this.sysdate.year < _this.date.year || (_this.sysdate.year == _this.date.year && _this.sysdate.month <= _this.date.month) ){
-			$btnRight.hide();
-		}
-	});
-	_this.on("render", function(opt){
-		if( _this.objClass.find(".appdate-main tr td > div.active").length <= 0 ){
-			console.error("还没有选中目标日期");
-		} else {
-			if(!!opt){
-				var addClass = ''
-					, removeClass = '';
-				var focusObj = _this.objClass.find(".appdate-main tr td > div.active");
-				var postureObj = focusObj.find("em");
-				var date = focusObj.closest("table").attr("data-date").split("-");
-				addClass += (opt.ovulation === true? " ovulation" : "")
-						  + (opt.ovulateDay === true? " ovulate-day" : "");
-				removeClass += (opt.ovulation === false? " ovulation" : "")
-							 + (opt.ovulateDay === false? " ovulate-day" : "");
-
-				focusObj.find(".appdate-main tr td > div.active").removeClass(removeClass).addClass(addClass);
-				postureObj.removeAttr("class").addClass(!!opt.posture ? " posture-"+opt.posture : "");
-				renderMenstrual({
-					start: opt.start,
-					end: opt.end,
-					year: parseInt(date[0],10),
-					month: parseInt(date[1],10),
-					really: opt.really
-				});
-			} else {
-				var date = _this.objClass.find(".appdate-main tr td > div.active").closest("table").attr("data-date").split("-");
-				_this.getApi( date[0], date[1] );
-			}
-		}
-	});
-	// _this.on("renderAll", function(){
-	// 	var $table = $("table");
-	// 	var date = [];
-	// 	for(var i=0; i<$table.length; i++){
-	// 		date = $table.eq(i).attr("data-date").split("-");
-	// 		_this.getApi( date[0], date[1] );
-	// 	}
-	// });
-	appdateFocus();
-	/*--------------------- 日期获取焦点 -------------------*/
-	function appdateFocus(){
-		_this.objClass.find(".appdate-main tr td > div.can-do-it").off("click").on("click", function(){
-			_this.objClass.find(".appdate-main tr td > div.can-do-it").removeClass("active");
-			$(this).addClass("active");
-			var date = {
-				year: _this.date.year,
-				month: _this.date.month,
-				day: parseInt(($(this).text()=="今"||$(this).text()=="今天"?_this.sysdate.day:$(this).text()),10)
-			}
-			_this.emit("focus", date, this);
-		});
-	}
-
-	function updataDateAdd(){
-		_this.date.year = _this.date.month == 12 ? _this.date.year+1 : _this.date.year;
-		_this.date.month = _this.date.month == 12 ? 1 : _this.date.month+1;
-		$(".appdate-val").html(_this.date.year+"年"+_this.date.month+"月");
-	}
-	function updataDateRemove(){
-		_this.date.year = _this.date.month == 1 ? _this.date.year-1 : _this.date.year;
-		_this.date.month = _this.date.month == 1 ? 12 : _this.date.month-1;
-		$(".appdate-val").html(_this.date.year+"年"+_this.date.month+"月");
-	}
-	function createResizeProxy(cb, scope){
-		return function(){
-			clearTimeout(scope.resizeTimeout);
-			var args = Array.prototype.slice.call(arguments, 0);
-			scope.resizeTimeout = setTimeout(function(){
-				var width = document.body.clientWidth;
-				if( width != scope.lastWidth ){
-					cb.apply(scope, args);
-				}
-				scope.lastWidth = width;
-			}, 300);
-		};
-	};
-
-	// 屏幕翻动调整大小
-	window.addEventListener("resize", createResizeProxy(function () {
-    	_this.width = document.body.clientWidth;
-    	var cur = Number(_this.objClass.find(".appdate-main").attr("data-translate-x")) / _this.objClass.find("table").width();
-		_this.objClass
-			.width( _this.width )
-			.find(".appdate-main")
-			.css("-webkit-transform","translateX("+(cur*_this.width)+"px)")
-			.attr("data-translate-x", cur*_this.width)
-			.find("table").width(_this.width);
-    }, window), false);
-	// 左右滑动
-	_this.objClass.find(".appdate-box")[0].slider( function(e, dir){
-		if( dir == "left" ){
-			_this.objClass.find(".date-left").trigger("click");
-		} else if( dir == "right" ) _this.objClass.find(".date-right").trigger("click");
-	});
-}
 CycleCalendar.prototype.addEvent = function(){
 	var _this = this;
 	
@@ -668,12 +577,11 @@ CycleCalendar.prototype.addEvent = function(){
 	var canClick = true; // 默认可以点击左右滑动
 	$btnRight.hide(); // 默认隐藏右侧滑动按钮
 
-	if( this.isdate && this.date.year == this.earlyDate[0] && this.date.month <= this.earlyDate[1] ){ console.log(123123); $btnLeft.hide(); }
+	//if( this.isdate && this.date.year == this.earlyDate[0] && this.date.month <= this.earlyDate[1] ){ console.log(123123); $btnLeft.hide(); }
 	/*--------------------- 左边滑动按钮 -------------------*/
 	$btnLeft.on("click", function(){
 		slideW = parseInt(_this.width,10);
-		if( _this.isdate && _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
-			console.log(123);
+		if( _this.isdate && _this.date.year == _this.sysdate.year && _this.date.month < _this.sysdate.month ){
 			$btnLeft.hide();
 			return false;
 		}
@@ -683,33 +591,50 @@ CycleCalendar.prototype.addEvent = function(){
 		updataDateRemove(); // 更新当前显示的日期
 		var translateX = parseInt($appdateMain.attr("data-translate-x"),10)+slideW; // 当前需滑动的位置
 		setTimeout(function(){
-			if( $appdateMain.find(".tab-"+lastMonth(_this.date).year+"-"+lastMonth(_this.date).month).length <= 0 ){ // 预加载的日期table是否已加载过
-				translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW; // 在前面插入一个table需要往回滑动一个table位置
-				$appdateMain.css("-webkit-transition","") // 移除动画
-							.width( Number($appdateMain.find("table").length+1)+"01%" ) // 更新table主体的宽度
-							.prepend( _this.initTable(lastMonth(_this.date).year, lastMonth(_this.date).month) )
-							.css("-webkit-transform","translateX("+(translateX)+"px)").attr("data-translate-x",translateX); // 在前面插入一个table需要往回滑动一个table位置
-				_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
+			if( _this.isdate ){
+				canClick = true;
+			} else if( _this.fill_history ){
+				_this.getApi(lastMonth(_this.date).year, lastMonth(_this.date).month, function(data){
+					if( $appdateMain.find(".tab-"+lastMonth(_this.date).year+"-"+lastMonth(_this.date).month).length <= 0 ){ // 预加载的日期table是否已加载过
+						translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW; // 在前面插入一个table需要往回滑动一个table位置
+						$appdateMain.css("-webkit-transition","") // 移除动画
+									.width( Number($appdateMain.find("table").length+1)+"01%" ) // 更新table主体的宽度
+									.prepend( _this.initTable(lastMonth(_this.date).year, lastMonth(_this.date).month) )
+									.css("-webkit-transform","translateX("+(translateX)+"px)").attr("data-translate-x",translateX); // 在前面插入一个table需要往回滑动一个table位置
+						_this.setMenstrual(lastMonth(_this.date).year, lastMonth(_this.date).month, data.data.info);
+						_this.setMenstrualToFillCycle();
+					}
+					appdateFocus();
+					canClick = true;
+				});
+			} else {
+				if( $appdateMain.find(".tab-"+lastMonth(_this.date).year+"-"+lastMonth(_this.date).month).length <= 0 ){ // 预加载的日期table是否已加载过
+					translateX = parseInt($appdateMain.attr("data-translate-x"),10)-slideW; // 在前面插入一个table需要往回滑动一个table位置
+					$appdateMain.css("-webkit-transition","") // 移除动画
+								.width( Number($appdateMain.find("table").length+1)+"01%" ) // 更新table主体的宽度
+								.prepend( _this.initTable(lastMonth(_this.date).year, lastMonth(_this.date).month) )
+								.css("-webkit-transform","translateX("+(translateX)+"px)").attr("data-translate-x",translateX); // 在前面插入一个table需要往回滑动一个table位置
+					_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
+				}
+				appdateFocus();
+				canClick = true;
 			}
-			appdateFocus();
-			canClick = true;
-			if( _this.fill_history ){
-				_this.setMenstrual();
-			}
+			
 		},_this.speed);
 		$appdateMain.css({
 			"-webkit-transform": "translateX("+translateX+"px)",
 			"-webkit-transition": "."+_this.speed*0.01+"s linear"
 		}).attr("data-translate-x",translateX);
-		if( _this.isdate && _this.date.year == _this.earlyDate[0] && _this.date.month <= _this.earlyDate[1] ){
+		if( _this.isdate ){
 			$btnLeft.hide();
 		}
 	});
 	/*--------------------- 右边滑动按钮 -------------------*/
 	$btnRight.on("click", function(){
 		slideW = parseInt(_this.width,10);
+		console.log( canClick );
 		if( !canClick ) return false;
-		if( _this.sysdate.year < _this.date.year || (_this.sysdate.year == _this.date.year && _this.sysdate.month <= _this.date.month) ){ // 当前月份时隐藏右边滑动按钮
+		if( _this.isdate && _this.date.year == _this.sysdate.year && _this.date.month == _this.sysdate.month ){
 			$btnRight.hide();
 			return false;
 		}
@@ -745,7 +670,7 @@ CycleCalendar.prototype.addEvent = function(){
 
 				focusObj.find(".appdate-main tr td > div.active").removeClass(removeClass).addClass(addClass);
 				postureObj.removeAttr("class").addClass(!!opt.posture ? " posture-"+opt.posture : "");
-				renderMenstrual({
+				_this.renderMenstrual({
 					start: opt.start,
 					end: opt.end,
 					year: parseInt(date[0],10),
@@ -851,6 +776,21 @@ CycleCalendar.prototype.addEvent = function(){
 			_this.objClass.find(".date-left").trigger("click");
 		} else if( dir == "right" ) _this.objClass.find(".date-right").trigger("click");
 	});
+}
+CycleCalendar.prototype.__getYMD = function(timestamp){
+	// t是时间戳
+	var obj = !!timestamp ? new Date(timestamp*1000) : new Date();
+	var obj = {
+		year: obj.getFullYear(),
+		month: obj.getMonth()+1,
+		day: obj.getDate(),
+		original: parseInt(obj.getTime()/1000,10),
+	};
+	obj.ymd = [obj.year, obj.month, obj.day];
+	obj.stamp = parseInt(new Date(obj.year, obj.month-1, obj.day).getTime()/1000,10);
+	obj.firstStamp = parseInt(new Date(obj.year, obj.month-1, 1).getTime()/1000,10);
+	obj.lastStamp = parseInt(new Date(obj.year, obj.month, 0).getTime()/1000,10); 
+	return obj;
 }
 function lastMonth(date){
 	return {
