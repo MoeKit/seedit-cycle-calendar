@@ -60,31 +60,16 @@ CycleCalendar.prototype.init = function(opt){
 	}
 	
 	if( !!_this.error() ) return false;
-	if( this.isdate ){
-		//_this.getApi( _this.sysdate.year, _this.sysdate.month, function(data){
-		//	_this.initHtml();
-		//	_this.getApi( lastMonth(_this.sysdate).year, lastMonth(_this.sysdate).month, function(data){
-		//		_this.addEvent();
-		//	} );
-		//} );
-		_this.initHtmlByDate();
-		// _this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
-		
-	} else if( this.fill_history ){
-		// _this.getApi( _this.date.year, _this.date.month, function(){
-		// 	_this.initHtml();
-		// 	_this.addEvent();
-		// } );
+	if( this.isdate ){ // 首页选择日期，（更新姨妈开始日和结束日）
+		_this.initHtmlByDate();		
+	} else if( this.fill_history ){ // 补充历史周期
 		_this.initHtmlByCompletementCycle();
-
-		//_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
-	} else  {
+	} else { // 亲密一刻
 		_this.initHtml();
 		_this.getApi( _this.date.year, _this.date.month );
 		_this.getApi( lastMonth(_this.date).year, lastMonth(_this.date).month );
 		_this.addEvent();	
 	}
-	
 }
 CycleCalendar.prototype.error = function(){
 	var _this = this;
@@ -120,7 +105,7 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 			return false;
 		}
 		var record = data.data.record;
-		var list = $(".tab-"+year+"-"+month+" .can-show");
+		var list = _this.objClass.find(".tab-"+year+"-"+month+" .can-show");
 		list.removeClass("menstrual ovulation ovulate-day").find("em").removeClass();
 		for( var i=0; i<record.length; i++ ){
 			if( !!record[i].period ){
@@ -144,14 +129,12 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 			var today = _this.sysdate;
 			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10));
 			var arr = [];
-			//if( month == 8 ) console.log( data.data.info );
 			if( !data.data.info[0].really ){
 				arr[0] = {
 					come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
 					end: parseInt(new Date(year, month, 1).getTime()/1000,10)
 				}
 			} else {
-
 				if( data.data.info[0].come - date.firstStamp > 14*24*60*60 ){
 					arr[0] = {
 						come: date.firstStamp,
@@ -166,188 +149,81 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 			}
 			if( month == 8 ) console.log( arr );
 			_this.history_arr = [];
-				
-
-				if( arr.length == 0 ) _this.history_arr = [];
-				var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
-				var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
-				for(var i=0;i<arr.length; i++){
-					arr[i] = {
-						come: _this.__getYMD(arr[i].come),
-						end: _this.__getYMD(arr[i].end)
-					};
-					for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
-						if( _cur_first <= j && j <= _cur_last ){
-							_this.history_arr.push( new Date(j*1000).getDate() );
-						}
+			if( arr.length == 0 ) _this.history_arr = [];
+			var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
+			var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
+			for(var i=0;i<arr.length; i++){
+				arr[i] = {
+					come: _this.__getYMD(arr[i].come),
+					end: _this.__getYMD(arr[i].end)
+				};
+				for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
+					if( _cur_first <= j && j <= _cur_last ){
+						_this.history_arr.push( new Date(j*1000).getDate() );
 					}
 				}
-			cb && cb(data);
-
-
-
-			// if( data.data.info[0].really ){
-			// 	var ring = data.data.ring;
-			// 	ring.info = data.data.info[0];
-			// 	
-			// 	var come = _this.__getYMD(ring.info.come);
-			// 	var end = _this.__getYMD(ring.info.end);
-			// 	var menstrualBtn = !ring.info.really ||
-			// 						(!!ring.info.really && today.stamp == come.original)
-			// 						(!!ring.info.really && today.stamp != come.original && !!ring.info.end && today.stamp > come.original+14*24*60*60) ? 
-			// 						'come' : 'end';
-			// 	
-			// 	if( menstrualBtn == "come" ){
-			// 		_this.earlyDate = _this.__getYMD(ring.info.come+15*24*60*60).ymd;
-			// 	} else if( menstrualBtn == "end" ){
-			// 		_this.earlyDate = _this.__getYMD(ring.info.come+24*60*60).ymd;
-			// 	} else {
-			// 		_this.earlyDate = today.ymd;
-			// 	}
-			// 	if( come.month == 9 ){
-			// 		//console.log(today.stamp, ring.info);
-			// 	}// console.log( _this.earlyDate );
-			// 	cb && cb(data);
-			// } else {
-			// 	console.log(123);
-			// 	_this.earlyDate = _this.__getYMD(today.stamp+24*60*60).ymd - 30*24*60*60;
-			// 	cb && cb(data);
-			// }
-			
+			}
+			cb && cb(data);			
 		}
 	}
 	// 补充历史周期，选择开始日和结束日
 	_this.setDateByCompletementCycle = function(year, month, data){
 		if( _this.fill_history ){
-			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10));
-			var rangeInfo = data.data.rangeInfo;
-			var arr = [];
+			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10)); // 选中的年月时间信息
+			var rangeInfo = data.data.rangeInfo; // 选中月份对应的上月下月本月共3个月的周期集合
+			var arr = []; // 补充周期可选中天数集合
 			
 			if( !rangeInfo || rangeInfo.length <= 0 ){
 				arr[0] = {
 					come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
 					end: parseInt(new Date(year, month, 1).getTime()/1000,10)
 				}
-				// console.log({
-				// 	come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
-				// 	end: parseInt(new Date(year, month, 1).getTime()/1000,10)-1
-				// }  );
-				// console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 			} else {
-				var one = _this.__getYMD(rangeInfo[0].end);
-				var last = _this.__getYMD(rangeInfo[rangeInfo.length-1].end);
-				var _status = {
-					first: false,
-					current: false,
-					last: false,
-					divider_first: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
-					divider_last: parseInt(new Date(year, month-1, 1).getTime()/1000,10)
-				}; // 本月周期是否存在上月周期和下月周期
-				//if( (one.year == year && one.month < month) || (one.year < year && one.month > month) ){
-					//if( month == 7 ){
-						// data.data.rangeInfo && data.data.rangeInfo[0] && console.log( new Date((data.data.rangeInfo[0].come)*1000), new Date((data.data.rangeInfo[0].end)*1000) );
-						// data.data.rangeInfo && data.data.rangeInfo[1] && console.log( new Date((data.data.rangeInfo[1].come)*1000), new Date((data.data.rangeInfo[1].end)*1000) );
-						// data.data.rangeInfo && data.data.rangeInfo[2] && console.log( new Date((data.data.rangeInfo[2].come)*1000), new Date((data.data.rangeInfo[2].end)*1000) );
-						// data.data.rangeInfo && data.data.rangeInfo[3] && console.log( new Date((data.data.rangeInfo[3].come)*1000), new Date((data.data.rangeInfo[3].end)*1000) );
-						// console.log("---------------------------------------------------------");
-					//}
+				// var one = _this.__getYMD(rangeInfo[0].end);
+				// var last = _this.__getYMD(rangeInfo[rangeInfo.length-1].end);
+				var _prepMonth = lastMonth({
+					year: year,
+					month: month
+				});
+				var _nextMonth = nextMonth({
+					year: year,
+					month: month
+				});
+
+				rangeInfo = [{
+					come: parseInt(new Date(_prepMonth.year, _prepMonth.month-1, 1).getTime()/1000,10)-14*24*60*60,
+					end: parseInt(new Date(_prepMonth.year, _prepMonth.month-1, 1).getTime()/1000,10)-14*24*60*60
+				}].concat(rangeInfo).concat([{
+					come: parseInt(new Date(_nextMonth.year, _nextMonth.month-1, 1).getTime()/1000,10)+14*24*60*60,
+					end: parseInt(new Date(_nextMonth.year, _nextMonth.month-1, 1).getTime()/1000,10)+14*24*60*60
+				}]);
+				
+				for(var i=0; i<rangeInfo.length; i++){
 					
-						var _prepMonth = lastMonth({
-							year: year,
-							month: month
+					if( !!rangeInfo[i+1] && rangeInfo[i+1].come - rangeInfo[i].end > 15*24*60*60 ){
+						arr.push({
+							come: rangeInfo[i].come+15*24*60*60,
+							end: rangeInfo[i+1].come-14*24*60*60
 						});
-						var _nextMonth = nextMonth({
-							year: year,
-							month: month
-						});
-
-						rangeInfo = [{
-							come: parseInt(new Date(_prepMonth.year, _prepMonth.month-1, 1).getTime()/1000,10)-14*24*60*60,
-							end: parseInt(new Date(_prepMonth.year, _prepMonth.month-1, 1).getTime()/1000,10)-14*24*60*60
-						}].concat(rangeInfo).concat([{
-							come: parseInt(new Date(_nextMonth.year, _nextMonth.month-1, 1).getTime()/1000,10)+14*24*60*60,
-							end: parseInt(new Date(_nextMonth.year, _nextMonth.month-1, 1).getTime()/1000,10)+14*24*60*60
-						}]);
-					for(var i=0; i<rangeInfo.length; i++){
-						if( _status.divider_first > rangeInfo[i].come ) _status.first = true;
-						if( rangeInfo[i].come < _status.divider_first && _status.divider_first < rangeInfo[i].end ) _status.current = true;
-						if( _status.divider_last < rangeInfo[i].end ) _status.last = true;
-						// if( month == 7 ){
-						// 	console.log( new Date((rangeInfo[i].come)*1000), new Date((rangeInfo[i].end)*1000) );
-						// 	//console.log( !!rangeInfo[i+1], rangeInfo[i+1].come, rangeInfo[i].end ,14*24*60*60 );
-						// }
-						
-						// if( !!rangeInfo[i].end < _this.sysdate.firstStamp ){
-						// 	start[0] = start[0] || {};
-						// 	start[0].start = rangeInfo[i].end+24*60*60;
-						// }
-
-						// if( one.year == year && one.month == month && i == 0 && rangeInfo[0].start - date.firstStamp > 14*24*60*60 ){
-						// 	arr.push({
-						// 		come: date.firstStamp,
-						// 		end: rangeInfo[0].start-14*24*60*60
-						// 	});
-						// } else 
-						
-						if( !!rangeInfo[i+1] && rangeInfo[i+1].come - rangeInfo[i].end > 15*24*60*60 ){
-							arr.push({
-								come: rangeInfo[i].come+15*24*60*60,
-								end: rangeInfo[i+1].come-14*24*60*60
-							});
-						}
-						// if( rangeInfo.length-1 == i && arr.length <= 0 ){
-						// 	var t = _this.__getYMD( rangeInfo[i].end );
-						// 	if( (t.year == year && t.month < month) || t.year < year ){
-						// 		arr.push({
-						// 			come: rangeInfo[i].end+14*24*60*60,
-						// 			end: _this.__getYMD( parseInt(new Date(year, month, 0).getTime()/1000,10) ).lastStamp
-						// 		});
-						// 	} else if(t.year == year && t.month == month){
-
-						// 	}
-						// 	if( (t.year == year && t.month != month) || t.year != year ){
-						// 		t = _this.__getYMD( parseInt(new Date(year, month, 0).getTime()/1000,10) );
-						// 		console.log(2222222222222);
-						// 		// arr.push({
-						// 		// 	come: t.firstStamp,
-						// 		// 	end: t.lastStamp
-						// 		// });
-						// 	}
-						// }
 					}
-
-				//}
-				
-				
-				// arr[0] = arr.length == 0 ? {
-				// 	come: date.firstStamp,
-				// 	end: date.lastStamp
-				// } : arr[0];
-				
-				
+				}
 			}
 			_this.history_arr = [];
 				
-
-				if( arr.length == 0 ) _this.history_arr = [];
-				var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
-				var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
-				for(var i=0;i<arr.length; i++){
-					arr[i] = {
-						come: _this.__getYMD(arr[i].come),
-						end: _this.__getYMD(arr[i].end)
-					};
-					for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
-						if( _cur_first <= j && j <= _cur_last ){
-							_this.history_arr.push( new Date(j*1000).getDate() );
-						}
+			if( arr.length == 0 ) _this.history_arr = [];
+			var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
+			var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
+			for(var i=0;i<arr.length; i++){
+				arr[i] = {
+					come: _this.__getYMD(arr[i].come),
+					end: _this.__getYMD(arr[i].end)
+				};
+				for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
+					if( _cur_first <= j && j <= _cur_last ){
+						_this.history_arr.push( new Date(j*1000).getDate() );
 					}
-					// for(var j=arr[i].come.day; j<=arr[i].end.day; j++){
-					// 	console.log(  );
-
-					// 	if( arr[i].end.year === year && arr[i].end.month === month ) _this.history_arr.push(j);
-					// }
 				}
+			}
 			cb && cb(data);
 		}
 	}
@@ -452,6 +328,7 @@ CycleCalendar.prototype.initHtmlByDate = function(year, month){
 					.css("-webkit-transform","translateX("+(-_this.width)+"px)")
 					.attr("data-translate-x",-_this.width)
 					.find("table").width(_this.width);
+			
 			_this.setMenstrual(_this.date.year, _this.date.month, next_data.data.info);
 			_this.setMenstrual(lastMonth(_this.date).year, lastMonth(_this.date).month, data.data.info);
 			_this.addEvent();
@@ -562,11 +439,11 @@ CycleCalendar.prototype.initTable = function(year, month){
 	table += '</tr></table>';
 	return table;
 }
-CycleCalendar.prototype._formatEarlyDate = function(){
-	var day = new Date(this.earlyDate[0],addZero(this.earlyDate[1]),0).getDate();
-	this.earlyDate[1] = this.earlyDate[1] <= 0 ? 1 : this.earlyDate[1] > 12 ? 12 : this.earlyDate[1];
-	this.earlyDate[2] = this.earlyDate[2] <= 0 ? 1 : this.earlyDate[2] > day ? day : this.earlyDate[2]; 
-}
+// CycleCalendar.prototype._formatEarlyDate = function(){
+// 	var day = new Date(this.earlyDate[0],this.earlyDate[1],0).getDate();
+// 	this.earlyDate[1] = this.earlyDate[1] <= 0 ? 1 : this.earlyDate[1] > 12 ? 12 : this.earlyDate[1];
+// 	this.earlyDate[2] = this.earlyDate[2] <= 0 ? 1 : this.earlyDate[2] > day ? day : this.earlyDate[2]; 
+// }
 CycleCalendar.prototype.addEvent = function(){
 	var _this = this;
 	
@@ -634,7 +511,8 @@ CycleCalendar.prototype.addEvent = function(){
 		slideW = parseInt(_this.width,10);
 		console.log( canClick );
 		if( !canClick ) return false;
-		if( _this.isdate && _this.date.year == _this.sysdate.year && _this.date.month == _this.sysdate.month ){
+		console.log( _this.date.month , _this.sysdate.month );
+		if( _this.date.year == _this.sysdate.year && _this.date.month == _this.sysdate.month ){
 			$btnRight.hide();
 			return false;
 		}

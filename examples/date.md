@@ -13,7 +13,7 @@ window.example1 = new CycleCalendar({
 	classname: "cycle-calendar-box-1",
 	speed: 300,
 	//token: "553d9e1b8cf432534c8b459c"
-	token: "55e501c78cf4328a298b45d4",
+	token: "55eba7d38cf432222f8b4572",
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json",
 	isdate: true
 
