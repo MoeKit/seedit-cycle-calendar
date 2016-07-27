@@ -14,7 +14,7 @@ window.example = new CycleCalendar({
 	classname: "cycle-calendar-box",
 	speed: 300,
 	//token: "553d9e1b8cf432534c8b459c"
-	token: "55eba7d38cf432222f8b4572",
+	token: "55ecff2c8cf4321c2f8b457e",
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json"
 });
 example.on("focus", function(date, dom){
@@ -40,7 +40,7 @@ window.example1 = new CycleCalendar({
 	classname: "cycle-calendar-box-1",
 	speed: 300,
 	//token: "553d9e1b8cf432534c8b459c"
-	token: "55eba7d38cf432222f8b4572",
+	token: "55ecff2c8cf4321c2f8b457e",
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json",
 	isdate: true
 

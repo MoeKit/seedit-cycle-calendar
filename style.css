@@ -15,7 +15,7 @@ ul li { list-style: none; }
 .appdate-main td { width: 14.2857%; border-bottom: 1px solid #eaeaea; font-size: 15px; color: #b4b4b4; height: 55px; }
 .appdate-main td > div { position: relative; color: #666; height: 55px; line-height: 53px; }
 .appdate-main td > div.can-not-do { color: #b4b4b4; }
-.appdate-main td > div.active { border: 1px solid #999; height: 53px; line-height: 51px; }
+.appdate-main td > div.active { border: 1px solid #CECECE; height: 53px; line-height: 51px; background-color: #CECECE; z-index: 1; }
 .appdate-main td > div.ovulation:after { position: absolute; left: 0; bottom: 0; width: 100%; border-bottom: 2px solid #66bb6a; content: ""; }
 .appdate-main td > div.menstrual:after { position: absolute; left: 0; bottom: 0; width: 100%; border-bottom: 2px solid #ff8a80; content: ""; }
 .appdate-main td > div.ovulate-day span { color: #fff; }

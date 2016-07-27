@@ -101,7 +101,7 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 	// 设置状态：排卵期、排卵日、同房姿势
 	_this.setMostStatus = function(year, month, data){
 		if( !data.data.record ){
-			console.error("设置状态时，record不存在");
+			// console.info("设置状态时，record不存在");
 			return false;
 		}
 		var record = data.data.record;
@@ -124,51 +124,9 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 	}
 	
 	// 周期圆圈-更新月经开始日和月经结束日
-	_this.setDateByCycle = function(data){
-		if( _this.isdate ){
-			var today = _this.sysdate;
-			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10));
-			var arr = [];
-			if( !data.data.info[0].really ){
-				arr[0] = {
-					come: parseInt(new Date(year, month-1, 1).getTime()/1000,10),
-					end: parseInt(new Date(year, month, 1).getTime()/1000,10)
-				}
-			} else {
-				if( data.data.info[0].come - date.firstStamp > 14*24*60*60 ){
-					arr[0] = {
-						come: date.firstStamp,
-						end: data.data.info[0].come - 14*24*60*60
-					}
-				} else if(data.data.info[0].come + 14*24*60*60 < date.lastStamp ){
-					arr[0] = {
-						come: data.data.info[0].come + 14*24*60*60,
-						end: date.lastStamp
-					}
-				}
-			}
-			if( month == 8 ) console.log( arr );
-			_this.history_arr = [];
-			if( arr.length == 0 ) _this.history_arr = [];
-			var _cur_first = parseInt(new Date(year, month-1, 1).getTime()/1000,10);
-			var _cur_last = parseInt(new Date(year, month, 1).getTime()/1000,10);
-			for(var i=0;i<arr.length; i++){
-				arr[i] = {
-					come: _this.__getYMD(arr[i].come),
-					end: _this.__getYMD(arr[i].end)
-				};
-				for( var j = arr[i].come.stamp; j < arr[i].end.stamp; j+=24*60*60 ){
-					if( _cur_first <= j && j <= _cur_last ){
-						_this.history_arr.push( new Date(j*1000).getDate() );
-					}
-				}
-			}
-			cb && cb(data);			
-		}
-	}
 	// 补充历史周期，选择开始日和结束日
 	_this.setDateByCompletementCycle = function(year, month, data){
-		if( _this.fill_history ){
+		if( _this.fill_history || _this.isdate ){
 			var date = _this.__getYMD(parseInt(new Date(year,month-1,1).getTime()/1000,10)); // 选中的年月时间信息
 			var rangeInfo = data.data.rangeInfo; // 选中月份对应的上月下月本月共3个月的周期集合
 			var arr = []; // 补充周期可选中天数集合
@@ -201,10 +159,17 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 				for(var i=0; i<rangeInfo.length; i++){
 					
 					if( !!rangeInfo[i+1] && rangeInfo[i+1].come - rangeInfo[i].end > 15*24*60*60 ){
-						arr.push({
-							come: rangeInfo[i].come+15*24*60*60,
-							end: rangeInfo[i+1].come-14*24*60*60
-						});
+						if( !!_this.history_date && _this.history_date.status == "end" ){
+							arr.push({
+								come: rangeInfo[i].come+15*24*60*60,
+								end: rangeInfo[i+1].come-0*24*60*60
+							});
+						} else {
+							arr.push({
+								come: rangeInfo[i].come+15*24*60*60,
+								end: rangeInfo[i+1].come-14*24*60*60
+							});
+						}
 					}
 				}
 			}
@@ -239,13 +204,12 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 				return console.error(data.error_message);
 			}
 			if( !data || !data.data || !data.data.record ){
-				console.error("ring.json: data.data||data.data.record不能为空");
+				console.info("ring.json: data.data||data.data.record为空");
 			}
 			if( !_this.isdate || !_this.fill_history ){
 				_this.setMostStatus(year, month, data);
 				_this.setMenstrual(year, month, data.data.info);
 			}
-			_this.setDateByCycle(data);
 			_this.setDateByCompletementCycle(year, month, data);
 		},
 		error: function(data){
@@ -273,7 +237,7 @@ CycleCalendar.prototype.renderMenstrual = function(opt){
 			list.eq( start.getDate()-1 ).addClass("menstrual");
 		}
 	} else {
-		console.error("经期开始时间为空 || 当前时间的年月为空");
+		console.info("经期开始时间为空 || 当前时间的年月为空");
 	}
 }
 function addZero(num){
@@ -341,7 +305,6 @@ CycleCalendar.prototype.setMenstrualToFillCycle = function(){
 		var _history_end = this.__getYMD(this.history_date.end);
 		for(var i=_history_come.month; i<=_history_end.month; i++){
 			if( this.objClass.find(".tab-"+_history_come.year+"-"+i).length > 0 ){
-				console.log( this.history_date.come );
 				this.setMenstrual(_history_come.year, i, [{
 					come: this.history_date.come,
 					end: this.history_date.end,
@@ -509,9 +472,7 @@ CycleCalendar.prototype.addEvent = function(){
 	/*--------------------- 右边滑动按钮 -------------------*/
 	$btnRight.on("click", function(){
 		slideW = parseInt(_this.width,10);
-		console.log( canClick );
 		if( !canClick ) return false;
-		console.log( _this.date.month , _this.sysdate.month );
 		if( _this.date.year == _this.sysdate.year && _this.date.month == _this.sysdate.month ){
 			$btnRight.hide();
 			return false;
@@ -561,14 +522,14 @@ CycleCalendar.prototype.addEvent = function(){
 			}
 		}
 	});
-	// _this.on("renderAll", function(){
-	// 	var $table = $("table");
-	// 	var date = [];
-	// 	for(var i=0; i<$table.length; i++){
-	// 		date = $table.eq(i).attr("data-date").split("-");
-	// 		_this.getApi( date[0], date[1] );
-	// 	}
-	// });
+	_this.on("renderAll", function(){
+		var $table = _this.objClass.find("table");
+		var date = [];
+		for(var i=0; i<$table.length; i++){
+			date = $table.eq(i).attr("data-date").split("-");
+			_this.getApi( date[0], date[1] );
+		}
+	});
 	appdateFocus();
 	/*--------------------- 日期获取焦点 -------------------*/
 	function appdateFocus(){
