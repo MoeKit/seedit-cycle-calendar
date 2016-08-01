@@ -76,9 +76,6 @@ CycleCalendar.prototype.error = function(){
 	if( !_this.classname || document.getElementsByClassName(_this.classname).length <= 0 ){
 		console.error("classname不能为空或者classname对象不存在");
 		return true;
-	} else if( !_this.token ){
-		console.error(_this.classname, " token不能为空");
-		return true;
 	} else return false;
 }
 
@@ -107,13 +104,15 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 		var record = data.data.record;
 		var list = _this.objClass.find(".tab-"+year+"-"+month+" .can-show");
 		list.removeClass("menstrual ovulation ovulate-day").find("em").removeClass();
+		//1普通期 2周期开始 4月经期 8月经结束 16排卵期开始 32排卵日 64排卵期 128排卵期结束 256周期结束 512月经干净
 		for( var i=0; i<record.length; i++ ){
+			record[i].really = true; //默认为真,等下一版本再添加预测数据
 			if( !!record[i].period ){
 				if( record[i].period == 0 ){
 					// list.eq(i).addClass("menstrual"); 经期采用时间段来控制
-				} else if( record[i].period == 2 && !!record[i].really ){
+				} else if( (record[i].period == 64 || record[i].period == 16 || record[i].period == 128) && !!record[i].really ){
 					list.eq(i).addClass("ovulation"); // 排卵期
-				} else if( record[i].period == 3 && !!record[i].really ){
+				} else if( record[i].period == 32 && !!record[i].really ){
 					list.eq(i).addClass("ovulation ovulate-day"); // 排卵日
 				}
 			}
@@ -196,10 +195,13 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 		url: _this.api,
 		type: "get",
 		data: {
-			token: _this.token,
 			date: new Date(year,month-1,1).getTime()*0.001 // ios不支持 "2015-04-01",即不支持"-"
 		},
+		xhrFields:{
+            withCredentials:true
+        },
 		success: function(data){
+			console.log(data)
 			if( data.error_code > 0 ){
 				return console.error(data.error_message);
 			}

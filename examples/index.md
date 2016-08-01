@@ -14,8 +14,8 @@ window.example = new CycleCalendar({
 	classname: "cycle-calendar-box",
 	speed: 300,
 	//token: "553d9e1b8cf432534c8b459c"
-	token: "55ecff2c8cf4321c2f8b457e",
-	api: "http://mitao.office.bzdev.net/api/wechat/ring.json"
+	//token: "55ecff2c8cf4321c2f8b457e",
+	api: "http://crazy.office.bzdev.net/api/mitao/ring.json"
 });
 example.on("focus", function(date, dom){
 	// doing focus
@@ -35,7 +35,7 @@ document.getElementById("btn_api").onclick = function(){
 	example.trigger("renderAll");
 }
 
-
+/*
 window.example1 = new CycleCalendar({
 	classname: "cycle-calendar-box-1",
 	speed: 300,
@@ -44,5 +44,5 @@ window.example1 = new CycleCalendar({
 	api: "http://mitao.office.bzdev.net/api/wechat/ring.json",
 	isdate: true
 
-});
+});*/
 ````
