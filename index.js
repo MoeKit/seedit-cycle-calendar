@@ -221,10 +221,27 @@ CycleCalendar.prototype.getApi = function(year, month, cb){
 }
 CycleCalendar.prototype.renderMenstrual = function(opt){
 	if( !opt.really ){
-		// 预测数据不显示
-		return false;
-	}
-	if( !!opt.start && !!opt.year && !!opt.month ){
+		// 预测数据只显示当月
+		var list = this.objClass.find(".tab-"+opt.year+"-"+opt.month+" .can-show");
+		var allDay = new Date(opt.year, opt.month, 0).getDate();
+		var start = new Date(opt.start*1000);
+		var curTime = Math.floor(new Date().getTime()/1000);
+		if( !!opt.end ){
+			for( var i=1; i<=allDay; i++ ){
+				var eventday = parseInt(new Date(opt.year, (opt.month-1), i).getTime()/1000,10);
+				if( opt.start <= eventday && eventday <= opt.end+24*60*60 ){
+					if (curTime < eventday) {
+						list.eq( i-1 ).addClass("menstrualfalse");
+					}else{
+						list.eq( i-1 ).addClass("menstrual");
+					}
+				}
+			}
+		} else if(start.getFullYear() == opt.year && (start.getMonth()+1) == opt.month ) {
+			list.eq( start.getDate()-1 ).addClass("menstrualfalse");
+		}
+
+	}else if( !!opt.start && !!opt.year && !!opt.month ){
 		var list = this.objClass.find(".tab-"+opt.year+"-"+opt.month+" .can-show");
 		var allDay = new Date(opt.year, opt.month, 0).getDate();
 		var start = new Date(opt.start*1000);
